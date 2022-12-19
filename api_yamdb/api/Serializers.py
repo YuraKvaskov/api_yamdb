@@ -1,5 +1,45 @@
 from rest_framework import serializers
+
 from reviews.models import Genre, Category, Title, Review, Comment
+from users.models import User
+
+
+class UsersSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'username', 'email', 'first_name',
+            'last_name', 'bio', 'role')
+
+
+class NotAdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'username', 'email', 'first_name',
+            'last_name', 'bio', 'role')
+        read_only_fields = ('role',)
+
+
+class GetTokenSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        required=True)
+    confirmation_code = serializers.CharField(
+        required=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'confirmation_code'
+        )
+
+
+class SignUpSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ('email', 'username')
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -23,12 +63,12 @@ class TitleReadSerializer(serializers.ModelSerializer):
         source='reviews__score__avg', read_only=True
     )
     genre = GenreSerializer(many=True, read_only=True)
-    category = CategorySerializer(read_only=True
-                                  )
+    category = CategorySerializer(read_only=True)
 
     class Meta:
+        Model = Title
         fields = ('id', 'name', 'year', 'rating', 'description', 'genre', 'category')
-        model = Title
+
 
 
 class TitleWriteSerializer(serializers.ModelSerializer):
@@ -40,8 +80,9 @@ class TitleWriteSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
         model = Title
+        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
+
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -49,8 +90,9 @@ class ReviewSerializer(serializers.ModelSerializer):
                                           read_only=True)
 
     class Meta:
-        fields = ('id', 'text', 'author', 'score', 'pub_date')
         model = Review
+        fields = ('id', 'text', 'author', 'score', 'pub_date')
+
 
     def validate(self, data):
         super().validate(data)
@@ -71,5 +113,6 @@ class CommentSerializer(serializers.ModelSerializer):
                                           read_only=True)
 
     class Meta:
-        fields = ('id', 'text', 'author', 'pub_date',)
         model = Comment
+        fields = ('id', 'text', 'author', 'pub_date',)
+

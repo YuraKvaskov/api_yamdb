@@ -1,7 +1,7 @@
 from django.db import models
 
 from reviews.validators import validate_score
-from users.models import CustomUser
+from users.models import User
 
 
 class Genre(models.Model):
@@ -50,7 +50,7 @@ class Review(models.Model):
         related_name='reviews')
     text = models.TextField()
     author = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         related_name='reviews')
     score = models.PositiveSmallIntegerField(validators=[validate_score])
@@ -75,7 +75,7 @@ class Comment(models.Model):
         related_name='comments')
     text = models.TextField()
     author = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         related_name='comments')
     pub_date = models.DateTimeField(auto_now_add=True)
