@@ -1,4 +1,7 @@
+import re
+
 from rest_framework import serializers
+from django.shortcuts import get_object_or_404
 
 from reviews.models import Genre, Category, Title, Review, Comment
 from users.models import User
@@ -11,6 +14,12 @@ class UsersSerializer(serializers.ModelSerializer):
             'username', 'email', 'first_name',
             'last_name', 'bio', 'role')
 
+    def validate_username(self, value):
+        if not re.fullmatch(r'^[\w.@+-]+', value):
+            raise serializers.ValidationError(
+                'Nickname должен содержать буквы,'
+                'цифры или символ @.+-_')
+        return value
 
 class NotAdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,12 +50,19 @@ class SignUpSerializer(serializers.ModelSerializer):
         model = User
         fields = ('email', 'username')
 
+    def validate(self, data):
+        if data.get('username') != 'me':
+            return data
+        raise serializers.ValidationError(
+            'Невозможное имя пользователя'
+        )
+
 
 class GenreSerializer(serializers.ModelSerializer):
     lookup_field = 'slug'
 
     class Meta:
-        fields = '__all__'
+        fields = ('name', 'slug',)
         model = Genre
 
 
@@ -54,7 +70,7 @@ class CategorySerializer(serializers.ModelSerializer):
     lookup_field = 'slug'
 
     class Meta:
-        fields = '__all__'
+        fields = ('name', 'slug',)
         model = Category
 
 
@@ -66,9 +82,8 @@ class TitleReadSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
 
     class Meta:
-        Model = Title
-        fields = ('id', 'name', 'year', 'rating', 'description', 'genre', 'category')
-
+        fields = ('id', 'name', 'year', 'rating', 'description', 'genre', 'category',)
+        model = Title
 
 
 class TitleWriteSerializer(serializers.ModelSerializer):
@@ -80,9 +95,8 @@ class TitleWriteSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
+        fields = ('id', 'name', 'year', 'description', 'genre', 'category',)
         model = Title
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
-
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -91,21 +105,23 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ('id', 'text', 'author', 'score', 'pub_date')
-
+        fields = ('id', 'text', 'author', 'score', 'pub_date',)
 
     def validate(self, data):
-        super().validate(data)
-        if self.context['request'].method != 'POST':
-            return data
-        user = self.context['request'].user
-        title_id = (
-            self.context['request'].parser_context['kwargs']['title_id']
-        )
-        if Review.objects.filter(author=user, title__id=title_id).exists():
+        title_id = self.context['view'].kwargs.get('title_id')
+        author = self.context.get('request').user
+        title = get_object_or_404(Title, id=title_id)
+        if (title.reviews.filter(author=author).exists()
+           and self.context.get('request').method != 'PATCH'):
             raise serializers.ValidationError(
-                    "Вы уже оставили отзыв на данное произведение")
+                'Можно оставлять только один отзыв!'
+            )
         return data
+
+    def validate_score(self, value):
+        if value < 1 or value > 10:
+            raise serializers.ValidationError('Недопустимое значение!')
+        return value
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -115,4 +131,3 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ('id', 'text', 'author', 'pub_date',)
-

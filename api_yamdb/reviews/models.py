@@ -24,7 +24,7 @@ class Title(models.Model):
     name = models.CharField(max_length=200)
     year = models.IntegerField()
     description = models.TextField()
-    genres = models.ManyToManyField(Genre, through='GenreTitle', blank=True)
+    genre = models.ManyToManyField(Genre, through='GenreTitle', blank=True)
     category = models.ForeignKey(
         Category, related_name='titles', on_delete=models.SET_NULL, blank=True, null=True)
 
@@ -69,7 +69,7 @@ class Review(models.Model):
 
 
 class Comment(models.Model):
-    reviews = models.ForeignKey(
+    review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,
         related_name='comments')
