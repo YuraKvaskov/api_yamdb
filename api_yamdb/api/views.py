@@ -63,6 +63,8 @@ class UsersViewSet(viewsets.ModelViewSet):
     serializer_class = UsersSerializer
     permission_classes = (IsAuthenticated, AdminOnly,)
     lookup_field = 'username'
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['username', ]
 
     @action(
         methods=['GET', 'PATCH'],
