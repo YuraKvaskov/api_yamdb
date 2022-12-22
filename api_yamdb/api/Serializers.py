@@ -17,7 +17,7 @@ class UsersSerializer(serializers.ModelSerializer):
     def validate_username(self, value):
         if not re.fullmatch(r'^[\w.@+-]+', value):
             raise serializers.ValidationError(
-                'Nickname должен содержать буквы,'
+                'Username должен содержать буквы,'
                 'цифры или символ @.+-_')
         return value
 
@@ -57,6 +57,12 @@ class SignUpSerializer(serializers.ModelSerializer):
             'Невозможное имя пользователя'
         )
 
+    def validate_username(self, value):
+        if not re.fullmatch(r'^[\w.@+-]+', value):
+            raise serializers.ValidationError(
+                'Username должен содержать буквы,'
+                'цифры или символ @.+-_')
+        return value
 
 class GenreSerializer(serializers.ModelSerializer):
     lookup_field = 'slug'
