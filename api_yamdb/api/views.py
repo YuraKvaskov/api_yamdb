@@ -1,4 +1,3 @@
-from django.core.mail import EmailMessage
 from django.db.models import Avg
 from rest_framework import filters, mixins, viewsets, status, permissions
 from django_filters.rest_framework import DjangoFilterBackend
@@ -6,10 +5,10 @@ from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import  AccessToken
+from django.contrib.auth.tokens import default_token_generator
 
-from api.Serializers import SignUpSerializer, GetTokenSerializer, NotAdminSerializer, UsersSerializer
+from .utils import send_confirmation_code_to_mail
 from api.filters import TitleFilter
 from api.permissions import AdminOnly, IsAdminUserOrReadOnly, AdminModeratorAuthorPermission
 from reviews.models import Genre, Category, Title, Review
@@ -19,7 +18,10 @@ from api.Serializers import (GenreSerializer,
                              TitleReadSerializer,
                              TitleWriteSerializer,
                              CommentSerializer,
-                             ReviewSerializer)
+                             ReviewSerializer,
+                             UserCreateSerializer, UserSerializer, UserRecieveTokenSerializer
+                             )
+
 
 class MyCustomViewSet(mixins.CreateModelMixin,
                       mixins.DestroyModelMixin,
@@ -58,91 +60,98 @@ class TitleViewSet(viewsets.ModelViewSet):
         return TitleWriteSerializer
 
 
-class UsersViewSet(viewsets.ModelViewSet):
+class UserCreateViewSet(mixins.CreateModelMixin,
+                        viewsets.GenericViewSet):
+
     queryset = User.objects.all()
-    serializer_class = UsersSerializer
+    serializer_class = UserCreateSerializer
+    permission_classes = (permissions.AllowAny,)
+
+
+    def create(self, request):
+        serializer = UserCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user, _ = User.objects.get_or_create(**serializer.validated_data)
+        confirmation_code = default_token_generator.make_token(user)
+        send_confirmation_code_to_mail(
+            email=user.email,
+            confirmation_code=confirmation_code
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class UserReceiveTokenViewSet(mixins.CreateModelMixin,
+                              viewsets.GenericViewSet):
+    """Представление для получения пользователем JWT токена."""
+
+    queryset = User.objects.all()
+    serializer_class = UserRecieveTokenSerializer
+    permission_classes = (permissions.AllowAny,)
+
+    def create(self, request, *args, **kwargs):
+        """Выдает пользователю JWT токен по коду подтверждения."""
+        serializer = UserRecieveTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data.get('username')
+        confirmation_code = serializer.validated_data.get('confirmation_code')
+        user = get_object_or_404(User, username=username)
+
+        if not default_token_generator.check_token(user, confirmation_code):
+            message = {'confirmation_code': 'Код подтверждения невалиден'}
+            return Response(message, status=status.HTTP_400_BAD_REQUEST)
+        message = {'token': str(AccessToken.for_user(user))}
+        return Response(message, status=status.HTTP_200_OK)
+
+class UserViewSet(mixins.ListModelMixin,
+                  mixins.CreateModelMixin,
+                  viewsets.GenericViewSet):
+    """Представление для обьектов модели User."""
+
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
     permission_classes = (IsAuthenticated, AdminOnly,)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('username',)
     lookup_field = 'username'
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['username', ]
 
     @action(
-        methods=['GET', 'PATCH'],
         detail=False,
-        permission_classes=(IsAuthenticated,),
-        url_path='me')
-    def get_current_user_info(self, request):
-        serializer = UsersSerializer(request.user)
+        methods=['get', 'patch', 'delete'],
+        url_path=r'(?P<username>[\w.@+-]+)',
+        url_name='get_user')
+    def get_user_by_username(self, request, username):
+        """Получаем данные username и
+        управляем ими."""
+        user = get_object_or_404(User, username=username)
         if request.method == 'PATCH':
-            if request.user.is_admin:
-                serializer = UsersSerializer(
-                    request.user,
-                    data=request.data,
-                    partial=True)
-            else:
-                serializer = NotAdminSerializer(
-                    request.user,
-                    data=request.data,
-                    partial=True)
+            serializer = UserSerializer(user, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.data)
+        elif request.method == 'DELETE':
+            user.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(
+        detail=False,
+        methods=['get', 'patch'],
+        url_path='me',
+        url_name='me',
+        permission_classes=(permissions.IsAuthenticated,)
+    )
 
-class APIGetToken(APIView):
-    """
-    Получение JWT-токена в обмен на username и confirmation code.
-    """
-
-    def post(self, request):
-        serializer = GetTokenSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-        try:
-            user = User.objects.get(username=data['username'])
-        except User.DoesNotExist:
-            return Response(
-                {'username': 'Пользователь не найден!'},
-                status=status.HTTP_404_NOT_FOUND)
-        if data.get('confirmation_code') == user.confirmation_code:
-            token = RefreshToken.for_user(user).access_token
-            return Response({'token': str(token)},
-                            status=status.HTTP_201_CREATED)
-        return Response(
-            {'confirmation_code': 'Неверный код подтверждения!'},
-            status=status.HTTP_400_BAD_REQUEST)
-
-
-class APISignup(APIView):
-    """
-    Получить код подтверждения на переданный email.
-    """
-    permission_classes = (permissions.AllowAny,)
-
-    @staticmethod
-    def send_email(data):
-        email = EmailMessage(
-            subject=data['email_subject'],
-            body=data['email_body'],
-            to=[data['to_email']]
-        )
-        email.send()
-
-    def post(self, request):
-        serializer = SignUpSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        email_body = (
-            f'Здравствуйте, {user.username}.'
-            f'\nКод подтверждения для доступа к API: {user.confirmation_code}'
-        )
-        data = {
-            'email_body': email_body,
-            'to_email': user.email,
-            'email_subject': 'Код подтверждения для доступа к API!'
-        }
-        self.send_email(data)
+    def get_me_data(self, request):
+        """Функция позволяет пользователю редактировать информацию о себе."""
+        if request.method == 'PATCH':
+            serializer = UserSerializer(
+                request.user, data=request.data,
+                partial=True, context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save(role=request.user.role)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = UserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

@@ -1,68 +1,86 @@
-import re
-
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
 
 from reviews.models import Genre, Category, Title, Review, Comment
 from users.models import User
 
 
-class UsersSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = (
-            'username', 'email', 'first_name',
-            'last_name', 'bio', 'role')
-
-    def validate_username(self, value):
-        if not re.fullmatch(r'^[\w.@+-]+', value):
-            raise serializers.ValidationError(
-                'Username должен содержать буквы,'
-                'цифры или символ @.+-_')
-        return value
-
-class NotAdminSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = (
-            'username', 'email', 'first_name',
-            'last_name', 'bio', 'role')
-        read_only_fields = ('role',)
-
-
-class GetTokenSerializer(serializers.ModelSerializer):
+class UserCreateSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
-        required=True)
-    confirmation_code = serializers.CharField(
-        required=True)
-
+        required=True,
+        max_length=150,
+        validators=[UnicodeUsernameValidator(), ]
+    )
     class Meta:
         model = User
         fields = (
-            'username',
-            'confirmation_code'
+            'username', 'email'
         )
-
-
-class SignUpSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = User
-        fields = ('email', 'username')
+    def validate_exist(self, attrs):
+        username = attrs.get('username')
+        user = User.objects.filter(username=username)
+        if user.exists():
+            raise ValidationError('Этот username уже используется')
+        email = attrs.get('email')
+        mail = User.objects.filter(email=email)
+        if mail.exists():
+            raise ValidationError('Этот email уже используется')
+        return attrs
 
     def validate(self, data):
-        if data.get('username') != 'me':
-            return data
-        raise serializers.ValidationError(
-            'Невозможное имя пользователя'
+        """Запрещает пользователям присваивать себе имя me
+        и использовать повторные username и email."""
+        if data.get('username') == 'me':
+            raise serializers.ValidationError(
+                'Использовать имя me запрещено')
+        return data
+
+
+class UserRecieveTokenSerializer(serializers.Serializer):
+    username = serializers.CharField(
+        required=True,
+        max_length=150,
+        validators=[UnicodeUsernameValidator(), ]
+    )
+    confirmation_code = serializers.CharField(
+        max_length=150,
+        required=True
+    )
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Сериализатор модели User."""
+    username = serializers.CharField(
+        required=True,
+        max_length=150,
+        validators=[UnicodeUsernameValidator(), ]
+    )
+
+    class Meta:
+        model = User
+        fields = (
+            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
         )
 
-    def validate_username(self, value):
-        if not re.fullmatch(r'^[\w.@+-]+', value):
+    def validate(self, data):
+        """Запрещает пользователям присваивать себе имя me
+        и использовать повторные username и email."""
+        if data.get('username') == 'me':
             raise serializers.ValidationError(
-                'Username должен содержать буквы,'
-                'цифры или символ @.+-_')
-        return value
+                'Использовать имя me запрещено'
+            )
+        if User.objects.filter(username=data.get('username')):
+            raise serializers.ValidationError(
+                'Пользователь с таким username уже существует'
+            )
+        if User.objects.filter(email=data.get('email')):
+            raise serializers.ValidationError(
+                'Пользователь с таким email уже существует'
+            )
+        return data
+
 
 class GenreSerializer(serializers.ModelSerializer):
     lookup_field = 'slug'

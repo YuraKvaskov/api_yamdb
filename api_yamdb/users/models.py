@@ -21,7 +21,7 @@ class User(AbstractUser):
         max_length=150,
         unique=True,
         blank=False,
-        null=False
+        null=False,
     )
     email = models.EmailField(
         max_length=254,
@@ -50,13 +50,6 @@ class User(AbstractUser):
         max_length=150,
         blank=True
     )
-    confirmation_code = models.CharField(
-        'код подтверждения',
-        max_length=255,
-        null=True,
-        blank=False,
-        default='XXXX'
-    )
 
     @property
     def is_user(self):
@@ -74,6 +67,10 @@ class User(AbstractUser):
         ordering = ('id',)
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['username', 'email'], name='unique_user')
+        ]
 
     def __str__(self):
         return self.username
