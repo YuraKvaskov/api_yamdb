@@ -16,7 +16,7 @@ class UserCreateSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=254, required=True)
 
     def validate(self, data):
-        """Запрещает пользователям присваивать себе имя me
+        """Запрещает пользователям регистрироваться под именем 'me'
         и использовать повторные username и email."""
         if_username = User.objects.filter(username=data['username']).exists()
         if_email = User.objects.filter(email=data['email']).exists()
@@ -25,7 +25,7 @@ class UserCreateSerializer(serializers.Serializer):
         if User.objects.filter(username=data['username'], email=data['email']).exists():
             return data
         if (if_email or if_username):
-            raise serializers.ValidationError('Почта уже использовалась')
+            raise serializers.ValidationError('Этот email уже использовался')
         return data
 
 class UserRecieveTokenSerializer(serializers.Serializer):
@@ -55,7 +55,7 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, data):
-        """Запрещает пользователям присваивать себе имя me
+        """Запрещает пользователям регистрироваться под именем 'me'
         и использовать повторные username и email."""
         if data.get('username') == 'me':
             raise serializers.ValidationError(
@@ -63,11 +63,11 @@ class UserSerializer(serializers.ModelSerializer):
             )
         if User.objects.filter(username=data.get('username')):
             raise serializers.ValidationError(
-                'Пользователь с таким username уже существует'
+                'Пользователь с этим username уже существует'
             )
         if User.objects.filter(email=data.get('email')):
             raise serializers.ValidationError(
-                'Пользователь с таким email уже существует'
+                'Пользователь с этим email уже существует'
             )
         return data
 

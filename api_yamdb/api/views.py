@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import  AccessToken
 from django.contrib.auth.tokens import default_token_generator
 
+from .mixins import MyCustomViewSet
 from .utils import send_confirmation_code_to_mail
 from api.filters import TitleFilter
 from api.permissions import AdminOnly, IsAdminUserOrReadOnly, AdminModeratorAuthorPermission
@@ -21,13 +22,6 @@ from api.Serializers import (GenreSerializer,
                              ReviewSerializer,
                              UserCreateSerializer, UserSerializer, UserRecieveTokenSerializer
                              )
-
-
-class MyCustomViewSet(mixins.CreateModelMixin,
-                      mixins.DestroyModelMixin,
-                      mixins.ListModelMixin,
-                      viewsets.GenericViewSet):
-    pass
 
 
 class GenreViewSet(MyCustomViewSet):
@@ -62,7 +56,10 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 class UserCreateViewSet(mixins.CreateModelMixin,
                         viewsets.GenericViewSet):
-
+    """
+    Представление для регистрации пользователя
+    и отправки на его почту проверочного кода.
+    """
     queryset = User.objects.all()
     serializer_class = UserCreateSerializer
     permission_classes = (permissions.AllowAny,)
