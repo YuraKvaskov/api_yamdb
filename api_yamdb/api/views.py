@@ -71,7 +71,9 @@ class UserCreateViewSet(mixins.CreateModelMixin,
     def create(self, request):
         serializer = UserCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user, _ = User.objects.get_or_create(**serializer.validated_data)
+        username = serializer.validated_data.get('username')
+        email = serializer.validated_data.get('email')
+        user, created = User.objects.get_or_create(username=username, email=email)
         confirmation_code = default_token_generator.make_token(user)
         send_confirmation_code_to_mail(
             email=user.email,
@@ -96,7 +98,7 @@ class UserReceiveTokenViewSet(mixins.CreateModelMixin,
         user = get_object_or_404(User, username=username)
 
         if not default_token_generator.check_token(user, confirmation_code):
-            message = {'confirmation_code': 'Код подтверждения невалиден'}
+            message = {'confirmation_code': 'Неверный код подтверждения'}
             return Response(message, status=status.HTTP_400_BAD_REQUEST)
         message = {'token': str(AccessToken.for_user(user))}
         return Response(message, status=status.HTTP_200_OK)
