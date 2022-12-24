@@ -5,7 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import  AccessToken
+from rest_framework_simplejwt.tokens import AccessToken
 from django.contrib.auth.tokens import default_token_generator
 
 from .mixins import MyCustomViewSet
@@ -64,8 +64,7 @@ class UserCreateViewSet(mixins.CreateModelMixin,
     serializer_class = UserCreateSerializer
     permission_classes = (permissions.AllowAny,)
 
-
-    def create(self, request):
+    def create(self, request, *args, **kwargs):
         serializer = UserCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data.get('username')
@@ -77,6 +76,7 @@ class UserCreateViewSet(mixins.CreateModelMixin,
             confirmation_code=confirmation_code
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class UserReceiveTokenViewSet(mixins.CreateModelMixin,
                               viewsets.GenericViewSet):
@@ -99,6 +99,7 @@ class UserReceiveTokenViewSet(mixins.CreateModelMixin,
             return Response(message, status=status.HTTP_400_BAD_REQUEST)
         message = {'token': str(AccessToken.for_user(user))}
         return Response(message, status=status.HTTP_200_OK)
+
 
 class UserViewSet(mixins.ListModelMixin,
                   mixins.CreateModelMixin,
@@ -139,7 +140,6 @@ class UserViewSet(mixins.ListModelMixin,
         url_name='me',
         permission_classes=(permissions.IsAuthenticated,)
     )
-
     def get_me_data(self, request):
         """Функция позволяет пользователю редактировать информацию о себе."""
         if request.method == 'PATCH':

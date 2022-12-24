@@ -17,15 +17,22 @@ class UserCreateSerializer(serializers.Serializer):
     def validate(self, data):
         """Запрещает пользователям регистрироваться под именем 'me'
         и использовать повторные username и email."""
-        if_username = User.objects.filter(username=data['username']).exists()
-        if_email = User.objects.filter(email=data['email']).exists()
+        if_username = User.objects.filter(
+            username=data['username']).exists()
+        if_email = User.objects.filter(
+            email=data['email']).exists()
         if data['username'] == 'me':
-            raise serializers.ValidationError('Недопустимое имя пользователя')
-        if User.objects.filter(username=data['username'], email=data['email']).exists():
+            raise serializers.ValidationError(
+                'Недопустимое имя пользователя')
+        if User.objects.filter(
+                username=data['username'],
+                email=data['email']).exists():
             return data
         if (if_email or if_username):
-            raise serializers.ValidationError('Этот email уже использовался')
+            raise serializers.ValidationError(
+                'Этот email уже использовался')
         return data
+
 
 class UserRecieveTokenSerializer(serializers.Serializer):
     username = serializers.CharField(
@@ -50,21 +57,31 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'bio',
+            'role'
         )
 
     def validate(self, data):
-        """Запрещает пользователям регистрироваться под именем 'me'
-        и использовать повторные username и email."""
+        """
+        Запрещает пользователям регистрироваться
+        под именем 'me' и использовать
+        повторные username и email.
+        """
         if data.get('username') == 'me':
             raise serializers.ValidationError(
                 'Использовать имя me запрещено'
             )
-        if User.objects.filter(username=data.get('username')):
+        if User.objects.filter(
+                username=data.get('username')):
             raise serializers.ValidationError(
                 'Пользователь с этим username уже существует'
             )
-        if User.objects.filter(email=data.get('email')):
+        if User.objects.filter(
+                email=data.get('email')):
             raise serializers.ValidationError(
                 'Пользователь с этим email уже существует'
             )
@@ -89,36 +106,59 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class TitleReadSerializer(serializers.ModelSerializer):
     rating = serializers.IntegerField(
-        source='reviews__score__avg', read_only=True
+        source='reviews__score__avg',
+        read_only=True
     )
-    genre = GenreSerializer(many=True, read_only=True)
+    genre = GenreSerializer(
+        many=True,
+        read_only=True)
     category = CategorySerializer(read_only=True)
 
     class Meta:
-        fields = ('id', 'name', 'year', 'rating', 'description', 'genre', 'category',)
+        fields = (
+            'id',
+            'name',
+            'year',
+            'rating',
+            'description',
+            'genre',
+            'category',)
         model = Title
 
 
 class TitleWriteSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(
-        slug_field='slug', many=True, queryset=Genre.objects.all()
+        slug_field='slug',
+        many=True,
+        queryset=Genre.objects.all()
     )
     category = serializers.SlugRelatedField(
-        slug_field='slug', queryset=Category.objects.all()
+        slug_field='slug',
+        queryset=Category.objects.all()
     )
 
     class Meta:
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category',)
+        fields = ('id',
+                  'name',
+                  'year',
+                  'description',
+                  'genre',
+                  'category',)
         model = Title
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(slug_field='username',
-                                          read_only=True)
+    author = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True)
 
     class Meta:
         model = Review
-        fields = ('id', 'text', 'author', 'score', 'pub_date',)
+        fields = ('id',
+                  'text',
+                  'author',
+                  'score',
+                  'pub_date',)
 
     def validate(self, data):
         title_id = self.context['view'].kwargs.get('title_id')
@@ -133,14 +173,19 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate_score(self, value):
         if value < 1 or value > 10:
-            raise serializers.ValidationError('Недопустимое значение!')
+            raise serializers.ValidationError(
+                'Недопустимое значение!')
         return value
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(slug_field='username',
-                                          read_only=True)
+    author = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True)
 
     class Meta:
         model = Comment
-        fields = ('id', 'text', 'author', 'pub_date',)
+        fields = ('id',
+                  'text',
+                  'author',
+                  'pub_date',)

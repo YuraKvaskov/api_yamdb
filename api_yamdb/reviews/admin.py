@@ -105,4 +105,3 @@ class CommentAdmin(admin.ModelAdmin):
     empty_value_display = 'значение отсутствует'
     list_filter = ('author', 'pub_date')
     search_fields = ('author',)
-

@@ -24,9 +24,16 @@ class Title(models.Model):
     name = models.CharField(max_length=200)
     year = models.IntegerField()
     description = models.TextField()
-    genre = models.ManyToManyField(Genre, through='GenreTitle', blank=True)
+    genre = models.ManyToManyField(
+        Genre,
+        through='GenreTitle',
+        blank=True)
     category = models.ForeignKey(
-        Category, related_name='titles', on_delete=models.SET_NULL, blank=True, null=True)
+        Category,
+        related_name='titles',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True)
 
     class Meta:
         ordering = ["-year"]
@@ -53,7 +60,8 @@ class Review(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='reviews')
-    score = models.PositiveSmallIntegerField(validators=[validate_score])
+    score = models.PositiveSmallIntegerField(
+        validators=[validate_score])
     pub_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
