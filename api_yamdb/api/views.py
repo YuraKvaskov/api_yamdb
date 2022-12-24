@@ -11,7 +11,10 @@ from django.contrib.auth.tokens import default_token_generator
 from .mixins import MyCustomViewSet
 from .utils import send_confirmation_code_to_mail
 from api.filters import TitleFilter
-from api.permissions import AdminOnly, IsAdminUserOrReadOnly, AdminModeratorAuthorPermission
+from api.permissions import (AdminOnly,
+                             IsAdminUserOrReadOnly,
+                             AdminModeratorAuthorPermission
+                             )
 from reviews.models import Genre, Category, Title, Review
 from users.models import User
 from api.Serializers import (GenreSerializer,
@@ -20,7 +23,9 @@ from api.Serializers import (GenreSerializer,
                              TitleWriteSerializer,
                              CommentSerializer,
                              ReviewSerializer,
-                             UserCreateSerializer, UserSerializer, UserRecieveTokenSerializer
+                             UserCreateSerializer,
+                             UserSerializer,
+                             UserRecieveTokenSerializer
                              )
 
 
@@ -69,7 +74,8 @@ class UserCreateViewSet(mixins.CreateModelMixin,
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data.get('username')
         email = serializer.validated_data.get('email')
-        user, created = User.objects.get_or_create(username=username, email=email)
+        user, created = User.objects.get_or_create(
+            username=username, email=email)
         confirmation_code = default_token_generator.make_token(user)
         send_confirmation_code_to_mail(
             email=user.email,
