@@ -2,7 +2,6 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
 
-
 from reviews.models import Genre, Category, Title, Review, Comment
 from users.models import User
 
