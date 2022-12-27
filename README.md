@@ -22,9 +22,9 @@
 Клонировать репозиторий и перейти в него в командной строке:
 
 
-git clone https://github.com/YuraKvaskov/api_final_yatube.git
+git clone https://github.com/YuraKvaskov/api_yamdb.git
 ```
-cd api_final_yatube
+cd api_yamdb
 ```
 
 Cоздать и активировать виртуальное окружение:

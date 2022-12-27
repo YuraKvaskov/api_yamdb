@@ -15,12 +15,14 @@ class UserCreateSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=254, required=True)
 
     def validate(self, data):
-        """Запрещает пользователям регистрироваться под именем 'me'
-        и использовать повторные username и email."""
-        if_username = User.objects.filter(
+        """
+        Запрещает пользователям регистрироваться под именем 'me'
+        и использовать повторные username и email.
+        """
+        test_username = User.objects.filter(
             username=data['username']).exists()
-        if_email = User.objects.filter(
-            email=data['email']).exists()
+        test_email = User.objects.filter(
+            email__iexact=data['email']).exists()
         if data['username'] == 'me':
             raise serializers.ValidationError(
                 'Недопустимое имя пользователя')
@@ -28,7 +30,10 @@ class UserCreateSerializer(serializers.Serializer):
                 username=data['username'],
                 email=data['email']).exists():
             return data
-        if (if_email or if_username):
+        if test_username:
+            raise serializers.ValidationError(
+                'Этот username уже использовался')
+        if test_email:
             raise serializers.ValidationError(
                 'Этот email уже использовался')
         return data
@@ -106,7 +111,6 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class TitleReadSerializer(serializers.ModelSerializer):
     rating = serializers.IntegerField(
-        source='reviews__score__avg',
         read_only=True
     )
     genre = GenreSerializer(
@@ -165,7 +169,8 @@ class ReviewSerializer(serializers.ModelSerializer):
         author = self.context.get('request').user
         title = get_object_or_404(Title, id=title_id)
         if (title.reviews.filter(author=author).exists()
-           and self.context.get('request').method != 'PATCH'):
+           and self.context.get('request').method != 'PATCH'
+        ):
             raise serializers.ValidationError(
                 'Можно оставлять только один отзыв!'
             )

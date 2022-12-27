@@ -17,7 +17,7 @@ from api.permissions import (AdminOnly,
                              )
 from reviews.models import Genre, Category, Title, Review
 from users.models import User
-from api.Serializers import (GenreSerializer,
+from api.serializers import (GenreSerializer,
                              CategorySerializer,
                              TitleReadSerializer,
                              TitleWriteSerializer,
@@ -48,7 +48,7 @@ class CategoryViewSet(MyCustomViewSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all().annotate(Avg('reviews__score'))
+    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
     permission_classes = (IsAdminUserOrReadOnly,)
     filterset_class = TitleFilter
     filter_backends = (DjangoFilterBackend,)
@@ -133,7 +133,7 @@ class UserViewSet(mixins.ListModelMixin,
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        elif request.method == 'DELETE':
+        if request.method == 'DELETE':
             user.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         serializer = UserSerializer(user)
@@ -178,9 +178,15 @@ class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = (AdminModeratorAuthorPermission,)
 
     def get_queryset(self):
-        review = get_object_or_404(Review, id=self.kwargs.get('review_id'))
+        review = get_object_or_404(
+            Review,
+            id=self.kwargs.get('review_id'),
+            title__id=self.kwargs.get('title_id'))
         return review.comments.all()
 
     def perform_create(self, serializer):
-        review = get_object_or_404(Review, id=self.kwargs.get('review_id'))
+        review = get_object_or_404(
+            Review,
+            id=self.kwargs.get('review_id'),
+            title__id=self.kwargs.get('title_id'))
         serializer.save(author=self.request.user, review=review)

@@ -133,11 +133,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
+EMAIL_FILE_PATH = os.path.join(BASE_DIR, "sent_emails")
+EMAIL_HOST_USER  = 'noreply@yamdb.app'
 
-EMAIL_HOST = 'smtp.yandex.com'
-
-EMAIL_HOST_USER = 'yamdb@yamdb.ru'
-EMAIL_HOST_PASSWORD = 'ThisIsNeWPassworD'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False

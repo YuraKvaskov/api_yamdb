@@ -1,6 +1,7 @@
-from django.db import models
+from datetime import datetime
 
-from reviews.validators import validate_score
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 from users.models import User
 
 
@@ -22,7 +23,19 @@ class Category(models.Model):
 
 class Title(models.Model):
     name = models.CharField(max_length=200)
-    year = models.IntegerField()
+    year = models.IntegerField(
+        db_index=True,
+        validators=[
+            MinValueValidator(
+                0,
+                message='Год релиза произведения не может быть отрицательным числом'
+        ),
+            MaxValueValidator(
+                int(datetime.now().year),
+                message='Год релиза не может быть больше текущего'
+        )
+    ],
+                               )
     description = models.TextField()
     genre = models.ManyToManyField(
         Genre,
@@ -61,11 +74,21 @@ class Review(models.Model):
         on_delete=models.CASCADE,
         related_name='reviews')
     score = models.PositiveSmallIntegerField(
-        validators=[validate_score])
+        validators=[
+            MinValueValidator(
+                0,
+                message='Минимальная оценка 0'
+        ),
+            MaxValueValidator(
+                10,
+                message='Максимальная оценка 10'
+        )
+        ],
+    )
     pub_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-pub_date"]
+        ordering = ['-pub_date']
         constraints = [
             models.UniqueConstraint(
                 fields=["author", "title"], name="unique_review"
