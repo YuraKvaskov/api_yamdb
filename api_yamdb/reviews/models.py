@@ -34,8 +34,8 @@ class Title(models.Model):
                 int(datetime.now().year),
                 message='Год релиза не может быть больше текущего'
             )
-            ],
-                               )
+        ],
+    )
     description = models.TextField()
     genre = models.ManyToManyField(
         Genre,
@@ -83,7 +83,7 @@ class Review(models.Model):
                 10,
                 message='Максимальная оценка 10'
             )
-            ],
+        ],
     )
     pub_date = models.DateTimeField(auto_now_add=True)
 
