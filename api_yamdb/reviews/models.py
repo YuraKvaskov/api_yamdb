@@ -28,13 +28,13 @@ class Title(models.Model):
         validators=[
             MinValueValidator(
                 0,
-                message='Год релиза произведения не может быть отрицательным числом'
-        ),
+                message='Год релиза не может быть отрицательным числом'
+            ),
             MaxValueValidator(
                 int(datetime.now().year),
                 message='Год релиза не может быть больше текущего'
-        )
-    ],
+            )
+            ],
                                )
     description = models.TextField()
     genre = models.ManyToManyField(
@@ -78,12 +78,12 @@ class Review(models.Model):
             MinValueValidator(
                 0,
                 message='Минимальная оценка 0'
-        ),
+            ),
             MaxValueValidator(
                 10,
                 message='Максимальная оценка 10'
-        )
-        ],
+            )
+            ],
     )
     pub_date = models.DateTimeField(auto_now_add=True)
 
